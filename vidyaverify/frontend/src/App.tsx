@@ -77,7 +77,10 @@ export default function App() {
             }
           >
             <Route index element={<DashboardRedirect />} />
+
+            {/* Dashboard routes — both canonical and alias */}
             <Route path="dashboard/college" element={<CollegeDashboard />} />
+            <Route path="dashboard" element={<DashboardRedirect />} />
             <Route
               path="dashboard/aicte"
               element={
@@ -86,17 +89,37 @@ export default function App() {
                 </ProtectedRoute>
               }
             />
+
+            {/* Institutions */}
             <Route path="institutions" element={<InstitutionsPage />} />
             <Route path="institutions/:id" element={<InstitutionDetailPage />} />
+
+            {/* Student Enrolments — canonical + alias */}
             <Route path="students" element={<StudentsPage />} />
+            <Route path="student-enrolments" element={<StudentsPage />} />
             <Route path="students/new" element={<StudentFormPage />} />
             <Route path="students/:id" element={<StudentDetailPage />} />
             <Route path="students/:id/edit" element={<StudentFormPage />} />
+
+            {/* Bulk Import — canonical + alias */}
             <Route path="upload" element={<UploadPage />} />
+            <Route path="bulk-import" element={<UploadPage />} />
             <Route path="upload/:id" element={<SubmissionDetailPage />} />
+            <Route path="bulk-import/:id" element={<SubmissionDetailPage />} />
+
+            {/* Validation & Duplicates — canonical + alias */}
             <Route path="findings" element={<FindingsPage />} />
+            <Route path="validation-duplicates" element={<FindingsPage />} />
+
+            {/* Alerts & Anomalies — canonical + alias */}
             <Route path="alerts" element={<AlertsPage />} />
+            <Route path="alerts-anomalies" element={<AlertsPage />} />
+
+            {/* Compliance Reports — canonical + alias */}
             <Route path="reports" element={<ReportsPage />} />
+            <Route path="compliance-reports" element={<ReportsPage />} />
+
+            {/* Audit Trail */}
             <Route
               path="audit-logs"
               element={

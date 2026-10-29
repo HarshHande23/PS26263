@@ -59,6 +59,17 @@ def _coerce_bool(val: Any) -> bool:
     return str(val).strip().lower() in ("1", "true", "yes", "y")
 
 
+def clean_row_data(row: Dict[str, Any]) -> Dict[str, Any]:
+    """Clean and safely mask row data for persistence and export."""
+    cleaned = {}
+    for k, v in row.items():
+        if k == "apaar_id":
+            cleaned["apaar_id"] = mask_apaar(str(v or ""))
+        else:
+            cleaned[k] = "" if (v is None or str(v).lower() == "nan") else str(v)
+    return cleaned
+
+
 def process_submission(
     submission: UploadSubmission,
     file_bytes: bytes,
@@ -108,9 +119,24 @@ def process_submission(
     # ── Phase 2: within-file duplicate detection ──────────────────────────
     within_dups: List[Tuple[int, int, str]] = validation_engine.detect_within_file_duplicates(rows)
     dup_row_indices = set()
+    second_occurrence_dups = set()
+    dup_details: Dict[int, Dict[str, Any]] = {}
+
     for a, b, reason in within_dups:
         dup_row_indices.add(a)
         dup_row_indices.add(b)
+        second_occurrence_dups.add(b)
+        dup_details[b] = {
+            "partner": a,
+            "rule": "RULE_DUPLICATE_ROW",
+            "message": f"Row {b}: Duplicate record rejected — identical APAAR ID matches earlier Row {a}.",
+        }
+        if a not in dup_details:
+            dup_details[a] = {
+                "partner": b,
+                "rule": "RULE_DUPLICATE_COLLISION",
+                "message": f"Row {a}: Within-file duplicate collision — matches identical APAAR ID in Row {b}.",
+            }
 
     # ── Phase 3: cross-institution duplicate detection ────────────────────
     apaar_hashes_in_file = []
@@ -141,29 +167,93 @@ def process_submission(
 
     for i, row in enumerate(rows, start=2):
         fatal_errors = [f for f in row_findings.get(i, []) if f.get("severity") == "error"]
-        has_errors = bool(fatal_errors)
-        is_within_dup = i in dup_row_indices
+        warning_findings = [f for f in row_findings.get(i, []) if f.get("severity") != "error"]
+        has_fatal = bool(fatal_errors)
+        is_second_dup = i in second_occurrence_dups
+        is_first_dup = i in dup_details and not is_second_dup
         apaar_raw = str(row.get("apaar_id") or "").strip()
         apaar_hash = hash_apaar(apaar_raw) if (apaar_raw and APAAR_PATTERN.match(apaar_raw)) else None
         is_cross_dup = apaar_hash in cross_dup_hashes if apaar_hash else False
 
-        if has_errors:
+        row_dict_clean = clean_row_data(row)
+
+        if has_fatal:
             invalid_count += 1
+            skipped_count += 1
             # Persist fatal import errors
             for f in fatal_errors:
                 err = ImportErrorModel(
                     submission_id=submission.id,
                     row_number=i,
-                    row_data={k: str(v) for k, v in row.items() if k != "apaar_id"},
+                    row_data=row_dict_clean,
                     error_type=f["rule_id"],
+                    field_name=f.get("field_name"),
                     error_message=f["title"],
                 )
                 db.add(err)
-            skipped_count += 1
+            # Also record any non-fatal warnings for this row
+            for f in warning_findings:
+                err = ImportErrorModel(
+                    submission_id=submission.id,
+                    row_number=i,
+                    row_data=row_dict_clean,
+                    error_type=f["rule_id"],
+                    field_name=f.get("field_name"),
+                    error_message=f["title"],
+                )
+                db.add(err)
             continue
 
-        if is_within_dup or is_cross_dup:
+        if is_second_dup:
             dup_count += 1
+            invalid_count += 1
+            skipped_count += 1
+            err = ImportErrorModel(
+                submission_id=submission.id,
+                row_number=i,
+                row_data=row_dict_clean,
+                error_type="RULE_DUPLICATE_ROW",
+                field_name="apaar_id",
+                error_message=dup_details[i]["message"],
+            )
+            db.add(err)
+            continue
+
+        if is_first_dup:
+            dup_count += 1
+            err = ImportErrorModel(
+                submission_id=submission.id,
+                row_number=i,
+                row_data=row_dict_clean,
+                error_type="RULE_DUPLICATE_COLLISION",
+                field_name="apaar_id",
+                error_message=dup_details[i]["message"],
+            )
+            db.add(err)
+
+        if is_cross_dup:
+            dup_count += 1
+            err = ImportErrorModel(
+                submission_id=submission.id,
+                row_number=i,
+                row_data=row_dict_clean,
+                error_type="RULE_CROSS_INST_DUP",
+                field_name="apaar_id",
+                error_message=f"Row {i}: Cross-institution duplicate — student APAAR already exists at another AICTE institution.",
+            )
+            db.add(err)
+
+        # Record warnings / anomalies (e.g. malformed email, anomalous age, future admission)
+        for f in warning_findings:
+            err = ImportErrorModel(
+                submission_id=submission.id,
+                row_number=i,
+                row_data=row_dict_clean,
+                error_type=f["rule_id"],
+                field_name=f.get("field_name"),
+                error_message=f["title"],
+            )
+            db.add(err)
 
         # Resolve programme/academic year
         prog_code = str(row.get("programme_code") or "").strip()
@@ -195,6 +285,15 @@ def process_submission(
                     status="open",
                 )
                 db.add(alert)
+                err = ImportErrorModel(
+                    submission_id=submission.id,
+                    row_number=i,
+                    row_data=row_dict_clean,
+                    error_type="RULE_INTAKE_EXCEEDED",
+                    field_name="programme_code",
+                    error_message=f"Row {i}: Admission would exceed approved intake limit for {prog.name}.",
+                )
+                db.add(err)
 
         # Check for re-import (same enrolment_number at same institution)
         enrol_num = str(row.get("enrolment_number") or "").strip() or None
@@ -207,8 +306,9 @@ def process_submission(
                 err = ImportErrorModel(
                     submission_id=submission.id,
                     row_number=i,
-                    row_data={k: str(v) for k, v in row.items() if k != "apaar_id"},
+                    row_data=row_dict_clean,
                     error_type="RULE_REIMPORT",
+                    field_name="enrolment_number",
                     error_message=f"Student with enrolment number '{enrol_num}' already exists.",
                 )
                 db.add(err)
@@ -241,7 +341,7 @@ def process_submission(
         db.flush()
 
         # Save findings for this student
-        all_row_findings = row_findings.get(i, [])
+        all_row_findings = list(row_findings.get(i, []))
         if is_cross_dup:
             for cd in cross_dups:
                 if apaar_hash == cd["apaar_id_hash"]:
@@ -296,22 +396,29 @@ def process_submission(
 
 
 def generate_rejected_csv(submission_id: UUID, db: Session) -> bytes:
-    """Return a CSV of all rejected rows for a submission."""
+    """Return a CSV of all rejected rows, duplicates, and anomalies for a submission."""
     errors = (
         db.query(ImportErrorModel)
         .filter_by(submission_id=submission_id)
+        .order_by(ImportErrorModel.row_number.asc())
         .all()
     )
     records = []
     for e in errors:
-        rec = dict(e.row_data or {})
-        rec["row_number"] = e.row_number
-        rec["error_type"] = e.error_type
-        rec["error_message"] = e.error_message
+        rec = {
+            "row_number": e.row_number,
+            "error_type": e.error_type,
+            "field_name": e.field_name or "",
+            "error_message": e.error_message,
+        }
+        if e.row_data and isinstance(e.row_data, dict):
+            for k, v in e.row_data.items():
+                if k not in rec:
+                    rec[k] = v
         records.append(rec)
 
     if not records:
-        return b"row_number,error_type,error_message\n"
+        return b"row_number,error_type,field_name,error_message\n"
 
     df = pd.DataFrame(records)
     buf = io.StringIO()

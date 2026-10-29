@@ -2,6 +2,7 @@ from fastapi import (
     APIRouter, Depends, HTTPException, UploadFile, File, Query
 )
 from fastapi.responses import StreamingResponse
+from fastapi.security import OAuth2PasswordBearer
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from uuid import UUID
@@ -9,6 +10,7 @@ import io
 
 from app.core.database import get_db
 from app.core.deps import get_current_active_user, require_roles
+from app.core.security import decode_token
 from app.core.enums import UserRole
 from app.core.config import settings
 from app.models.upload_submission import UploadSubmission
@@ -19,6 +21,7 @@ from app.services.import_service import process_submission, generate_rejected_cs
 import math
 
 router = APIRouter()
+oauth2_scheme_optional = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login", auto_error=False)
 
 MAX_BYTES = settings.MAX_UPLOAD_SIZE_MB * 1024 * 1024
 ALLOWED_EXTENSIONS = {".csv", ".xlsx", ".xls"}
@@ -126,10 +129,22 @@ def get_submission_errors(
 @router.get("/{submission_id}/rejected-export")
 def export_rejected_rows(
     submission_id: UUID,
+    token: Optional[str] = Query(None),
+    auth_header: Optional[str] = Depends(oauth2_scheme_optional),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
 ):
-    """Download a CSV of all rejected rows for this submission."""
+    """Download a CSV of all rejected rows, duplicates, and anomalies for this submission."""
+    raw_token = auth_header or token
+    if not raw_token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    payload = decode_token(raw_token)
+    if not payload or payload.get("type") != "access":
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+    user_id = payload.get("sub")
+    current_user = db.query(User).filter(User.id == user_id, User.is_active == True).first()
+    if not current_user:
+        raise HTTPException(status_code=401, detail="User not found")
+
     sub = db.query(UploadSubmission).filter_by(id=submission_id).first()
     if not sub:
         raise HTTPException(status_code=404, detail="Submission not found")

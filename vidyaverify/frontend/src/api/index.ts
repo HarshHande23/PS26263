@@ -108,7 +108,16 @@ export const uploadsApi = {
     const res = await apiClient.get(`/uploads/${id}/errors`)
     return res.data
   },
-  rejectedExportUrl: (id: string) => `${apiClient.defaults.baseURL}/uploads/${id}/rejected-export`,
+  exportRejectedRows: async (id: string): Promise<Blob> => {
+    const res = await apiClient.get(`/uploads/${id}/rejected-export`, {
+      responseType: 'blob',
+    })
+    return res.data
+  },
+  rejectedExportUrl: (id: string) => {
+    const token = localStorage.getItem('access_token')
+    return `${apiClient.defaults.baseURL}/uploads/${id}/rejected-export${token ? `?token=${encodeURIComponent(token)}` : ''}`
+  },
   templateUrl: () => `${apiClient.defaults.baseURL}/uploads/template/download`,
 }
 
