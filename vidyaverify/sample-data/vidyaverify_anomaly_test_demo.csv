@@ -1,0 +1,8 @@
+full_name,apaar_id,date_of_birth,gender,email,phone,enrolment_number,programme_code,academic_year,admission_date,admission_category,is_supernumerary
+Suresh Raina,999988887777,2004-03-15,Male,suresh.r@example.com,9876543220,ANOM_001,BTECH-CS,2024-25,2024-08-01,general,false
+Ramesh Tendulkar,999988887777,2004-06-20,Male,ramesh.t@example.com,9876543221,ANOM_002,BTECH-CS,2024-25,2024-08-01,general,false
+,111122223333,2004-01-10,Male,missing.name@example.com,9876543222,ANOM_003,BTECH-CS,2024-25,2024-08-01,general,false
+Rajesh Koothrappali,NOT_A_VALID_APAAR,2004-08-12,Male,rajesh.k@example.com,9876543223,ANOM_004,BTECH-CS,2024-25,2024-08-01,general,false
+Kunal Sen,555566667777,2035-05-18,Male,kunal.sen@example.com,9876543224,ANOM_005,BTECH-CS,2024-25,2024-08-01,general,false
+Pooja Hegde,888899990000,2004-07-22,Female,invalid_email_syntax_without_domain,9876543225,ANOM_006,BTECH-CS,2024-25,2024-08-01,general,false
+Aarav Kumar,123456789001,2004-01-01,Male,aarav.duplicate@othercollege.edu,9876543226,ANOM_007,BTECH-CS,2024-25,2024-08-01,general,false

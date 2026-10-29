@@ -1,0 +1,11 @@
+full_name,apaar_id,date_of_birth,gender,email,phone,enrolment_number,programme_code,academic_year,admission_date,admission_category,is_supernumerary
+Aarav Sharma,123456789012,2004-05-14,Male,aarav.sharma@coep.ac.in,9876543210,ENR2024CS101,BTECH-CS,2024-25,2024-08-01,general,false
+Diya Patel,234567890123,2003-11-22,Female,diya.patel@coep.ac.in,9876543211,ENR2024CS102,BTECH-CS,2024-25,2024-08-01,obc,false
+Rohan Deshmukh,345678901234,2004-02-18,Male,rohan.d@coep.ac.in,9876543212,ENR2024CS103,BTECH-CS,2024-25,2024-08-01,sc,false
+Ananya Iyer,456789012345,2004-09-30,Female,ananya.iyer@coep.ac.in,9876543213,ENR2024CS104,BTECH-CS,2024-25,2024-08-01,ews,false
+Vikramaditya Rao,567890123456,2003-07-08,Male,vikram.rao@coep.ac.in,9876543214,ENR2024EE101,BTECH-EE,2024-25,2024-08-01,general,false
+Meera Joshi,678901234567,2004-12-05,Female,meera.j@coep.ac.in,9876543215,ENR2024EE102,BTECH-EE,2024-25,2024-08-01,general,false
+Aditya Verma,789012345678,2004-04-19,Male,aditya.v@coep.ac.in,9876543216,ENR2024EE103,BTECH-EE,2024-25,2024-08-01,obc,false
+Siddharth Menon,890123456789,2003-08-25,Male,siddharth.m@coep.ac.in,9876543217,ENR2024AI101,MTECH-AI,2024-25,2024-08-01,general,false
+Kavya Nair,901234567890,2003-01-15,Female,kavya.n@coep.ac.in,9876543218,ENR2024AI102,MTECH-AI,2024-25,2024-08-01,general,false
+Tanvi Kulkarni,912345678901,2004-10-11,Female,tanvi.k@coep.ac.in,9876543219,ENR2024CS105,BTECH-CS,2024-25,2024-08-01,general,false
