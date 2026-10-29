@@ -2,7 +2,7 @@ from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional, List
 from datetime import datetime, date
 from uuid import UUID
-from app.core.enums import EnrolmentStatus, AdmissionCategory, ValidationStatus
+from app.core.enums import EnrolmentStatus, AdmissionCategory, ValidationStatus, VerificationStatus
 
 
 class StudentBase(BaseModel):
@@ -72,6 +72,10 @@ class StudentOut(BaseModel):
     is_foreign_national: bool
     is_pwd: bool
     validation_status: ValidationStatus
+    verification_status: VerificationStatus = VerificationStatus.NOT_CHECKED
+    last_verified_at: Optional[datetime] = None
+    verification_notes: Optional[str] = None
+    qr_token: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -87,6 +91,7 @@ class StudentSummary(BaseModel):
     enrolment_status: EnrolmentStatus
     admission_category: AdmissionCategory
     validation_status: ValidationStatus
+    verification_status: VerificationStatus = VerificationStatus.NOT_CHECKED
 
     model_config = {"from_attributes": True}
 

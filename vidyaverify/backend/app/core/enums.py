@@ -78,8 +78,21 @@ class DuplicateStatus(str, PyEnum):
 
 class AlertStatus(str, PyEnum):
     OPEN = "open"
+    UNDER_REVIEW = "under_review"
+    AWAITING_INSTITUTION_CORRECTION = "awaiting_institution_correction"
     ACKNOWLEDGED = "acknowledged"
     RESOLVED = "resolved"
+    DISMISSED = "dismissed"
+
+
+class VerificationStatus(str, PyEnum):
+    NOT_CHECKED = "not_checked"
+    FORMAT_VALID = "format_valid"
+    PENDING_EXTERNAL_VERIFICATION = "pending_external_verification"
+    VERIFIED_BY_PROVIDER = "verified_by_provider"
+    NOT_VERIFIED = "not_verified"
+    PROVIDER_UNAVAILABLE = "provider_unavailable"
+    MANUAL_REVIEW_REQUIRED = "manual_review_required"
 
 
 class CorrectionStatus(str, PyEnum):

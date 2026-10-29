@@ -14,3 +14,4 @@ from app.models.duplicate_case import DuplicateCase  # noqa
 from app.models.alert import Alert  # noqa
 from app.models.audit_log import AuditLog  # noqa
 from app.models.correction_request import CorrectionRequest  # noqa
+from app.models.verification_request import VerificationRequest  # noqa

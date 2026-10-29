@@ -5,7 +5,7 @@ from sqlalchemy import (Column, String, Boolean, DateTime, Date,
 from app.core.database import UUID
 from sqlalchemy.orm import relationship
 from app.core.database import Base
-from app.core.enums import EnrolmentStatus, AdmissionCategory, ValidationStatus
+from app.core.enums import EnrolmentStatus, AdmissionCategory, ValidationStatus, VerificationStatus
 
 
 class Student(Base):
@@ -47,6 +47,16 @@ class Student(Base):
     # Validation state
     validation_status = Column(SAEnum(ValidationStatus), nullable=False, default=ValidationStatus.OPEN)
 
+    # Verification state
+    verification_status = Column(SAEnum(VerificationStatus), nullable=False, default=VerificationStatus.NOT_CHECKED)
+    last_verified_at = Column(DateTime(timezone=True), nullable=True)
+    verification_notes = Column(String(500), nullable=True)
+
+    # QR Verification Token
+    qr_token = Column(String(255), nullable=True, unique=True, index=True)
+    qr_token_expires_at = Column(DateTime(timezone=True), nullable=True)
+    qr_token_revoked = Column(Boolean, default=False, nullable=False)
+
     # Metadata
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
     updated_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc),
@@ -59,6 +69,7 @@ class Student(Base):
     enrolment_history = relationship("EnrolmentHistory", back_populates="student", cascade="all, delete-orphan")
     validation_findings = relationship("ValidationFinding", back_populates="student")
     correction_requests = relationship("CorrectionRequest", back_populates="student")
+    verification_requests = relationship("VerificationRequest", back_populates="student", cascade="all, delete-orphan")
 
     __table_args__ = (
         Index("ix_students_institution_status", "institution_id", "enrolment_status"),
