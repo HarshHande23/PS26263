@@ -4,6 +4,7 @@ from typing import Optional, List
 from uuid import UUID
 import math
 from datetime import datetime, timezone
+from pydantic import BaseModel
 
 from app.core.database import get_db
 from app.core.deps import get_current_active_user, require_roles
@@ -113,6 +114,43 @@ def list_duplicates(
     if status:
         q = q.filter(DuplicateCase.status == status)
     return q.all()
+
+
+class DuplicateReviewRequest(BaseModel):
+    status: str  # "under_review", "confirmed", "dismissed"
+    notes: Optional[str] = None
+
+
+@router.post("/duplicates/{duplicate_id}/review", response_model=DuplicateCaseOut)
+def review_duplicate_case(
+    duplicate_id: UUID,
+    payload: DuplicateReviewRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_roles(UserRole.SUPER_ADMIN, UserRole.AICTE_ADMIN)),
+):
+    case = db.query(DuplicateCase).filter_by(id=duplicate_id).first()
+    if not case:
+        raise HTTPException(status_code=404, detail="Duplicate case not found")
+    new_status = payload.status.lower()
+    if new_status not in ("under_review", "confirmed", "dismissed"):
+        raise HTTPException(status_code=400, detail="Invalid status. Allowed: under_review, confirmed, dismissed")
+    case.status = new_status
+    case.notes = payload.notes
+    case.reviewed_by_id = current_user.id
+    case.reviewed_at = datetime.now(timezone.utc)
+    
+    from app.models.audit_log import AuditLog
+    audit = AuditLog(
+        user_id=current_user.id,
+        action="duplicate_case.reviewed",
+        resource_type="DuplicateCase",
+        resource_id=str(case.id),
+        details={"status": new_status, "notes": payload.notes},
+    )
+    db.add(audit)
+    db.commit()
+    db.refresh(case)
+    return case
 
 
 @router.post("/corrections", response_model=CorrectionRequestOut, status_code=201)
