@@ -1,0 +1,6 @@
+full_name,apaar_id,date_of_birth,gender,email,phone,enrolment_number,programme_code,academic_year,admission_date,admission_category,is_supernumerary,is_nri,is_oci,is_foreign_national,is_pwd
+Aarav Sharma,123456789012,2004-05-14,Male,aarav.sharma@example.edu.in,9876543210,ENR2024CS001,BTECH-CSE,2024-25,2024-08-01,general,false,false,false,false,false
+Diya Patel,234567890123,2003-11-22,Female,diya.patel@example.edu.in,9876543211,ENR2024CS002,BTECH-CSE,2024-25,2024-08-01,obc,false,false,false,false,false
+Rohan Deshmukh,345678901234,2004-02-18,Male,rohan.d@example.edu.in,9876543212,ENR2024CS003,BTECH-CSE,2024-25,2024-08-01,sc,false,false,false,false,false
+Ananya Iyer,456789012345,2004-09-30,Female,ananya.iyer@example.edu.in,9876543213,ENR2024ECE001,BTECH-ECE,2024-25,2024-08-01,ews,false,false,false,false,false
+Vikramaditya Rao,567890123456,2003-07-08,Male,vikram.rao@example.edu.in,9876543214,ENR2024ME001,BTECH-MECH,2024-25,2024-08-01,management_quota,false,false,false,false,false

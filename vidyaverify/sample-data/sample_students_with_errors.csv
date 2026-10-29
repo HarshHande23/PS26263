@@ -1,0 +1,5 @@
+full_name,apaar_id,date_of_birth,gender,email,phone,enrolment_number,programme_code,academic_year,admission_date,admission_category,is_supernumerary
+Kavita Nair,678901234567,2004-03-12,Female,kavita.nair@example.com,9876543215,ERR001,BTECH-CSE,2024-25,2024-08-01,general,false
+,789012345678,2004-04-14,Male,noname@example.com,9876543216,ERR002,BTECH-CSE,2024-25,2024-08-01,general,false
+Tariq Khan,INVALID123,2004-01-10,Male,invalid_email_format,9876543217,ERR003,BTECH-CSE,2024-25,2024-08-01,general,false
+Kavita Nair,678901234567,2004-03-12,Female,kavita.nair2@example.com,9876543218,ERR004,BTECH-CSE,2024-25,2024-08-01,general,false
