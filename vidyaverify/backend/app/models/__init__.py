@@ -15,3 +15,4 @@ from app.models.alert import Alert  # noqa
 from app.models.audit_log import AuditLog  # noqa
 from app.models.correction_request import CorrectionRequest  # noqa
 from app.models.verification_request import VerificationRequest  # noqa
+from app.models.anomaly_record import AnomalyRecord  # noqa

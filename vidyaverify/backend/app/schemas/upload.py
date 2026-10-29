@@ -67,6 +67,9 @@ class AlertOut(BaseModel):
     status: str
     related_submission_id: Optional[UUID] = None
     related_student_id: Optional[UUID] = None
+    anomaly_score: Optional[float] = None
+    risk_level: Optional[str] = None
+    detected_issues: Optional[List[str]] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}

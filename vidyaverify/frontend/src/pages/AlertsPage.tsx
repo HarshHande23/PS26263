@@ -19,6 +19,7 @@ export default function AlertsPage() {
   const { user } = useAuth()
   const queryClient = useQueryClient()
   const [statusFilter, setStatusFilter] = useState<string>('')
+  const [typeFilter, setTypeFilter] = useState<string>('')
   const [transitionDialog, setTransitionDialog] = useState<any>(null)
   const [targetStatus, setTargetStatus] = useState<string>('under_review')
   const [notes, setNotes] = useState<string>('')
@@ -27,11 +28,12 @@ export default function AlertsPage() {
   const isAicte = user?.role === 'super_admin' || user?.role === 'aicte_admin'
 
   const { data: alerts, isLoading, error } = useQuery({
-    queryKey: ['alerts', instId, statusFilter],
+    queryKey: ['alerts', instId, statusFilter, typeFilter],
     queryFn: () =>
       alertsApi.list({
         institution_id: instId,
         status: statusFilter || undefined,
+        alert_type: typeFilter || undefined,
         limit: 100,
       }),
   })
@@ -68,6 +70,16 @@ export default function AlertsPage() {
 
         <div className="flex items-center gap-2">
           <Filter className="w-3.5 h-3.5 text-gray-400" />
+          <select
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value)}
+            className="border border-gray-300 rounded px-3 py-1.5 text-xs bg-white text-gray-700 outline-none"
+          >
+            <option value="">All Categories</option>
+            <option value="ml_anomaly">ML Anomaly (Isolation Forest)</option>
+            <option value="intake_exceeded">Intake Exceeded</option>
+            <option value="cross_institution_duplicate">Cross-Institution Duplicate</option>
+          </select>
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value)}
@@ -110,6 +122,21 @@ export default function AlertsPage() {
                       <span className="text-[11px] font-mono bg-gray-100 text-gray-700 px-2 py-0.5 rounded border border-gray-200">
                         {alert.alert_type}
                       </span>
+                      {alert.anomaly_score !== null && alert.anomaly_score !== undefined && (
+                        <span className="text-[11px] font-mono bg-purple-50 text-purple-700 font-semibold px-2 py-0.5 rounded border border-purple-200">
+                          Score: {alert.anomaly_score.toFixed(4)}
+                        </span>
+                      )}
+                      {alert.risk_level && (
+                        <span className={`text-[11px] font-bold uppercase px-2 py-0.5 rounded border ${
+                          alert.risk_level === 'critical' ? 'bg-red-50 text-red-700 border-red-200' :
+                          alert.risk_level === 'high' ? 'bg-rose-50 text-rose-700 border-rose-200' :
+                          alert.risk_level === 'medium' ? 'bg-amber-50 text-amber-700 border-amber-200' :
+                          'bg-blue-50 text-blue-700 border-blue-200'
+                        }`}>
+                          Risk: {alert.risk_level}
+                        </span>
+                      )}
                       <span
                         className={`text-[11px] font-bold px-2 py-0.5 rounded uppercase ${
                           alert.status === 'open'
@@ -131,6 +158,16 @@ export default function AlertsPage() {
 
                     <h3 className="text-sm font-bold text-gray-900">{alert.title}</h3>
                     {alert.message && <p className="text-xs text-gray-600 leading-relaxed">{alert.message}</p>}
+
+                    {alert.detected_issues && alert.detected_issues.length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 pt-1">
+                        {alert.detected_issues.map((issue, idx) => (
+                          <span key={idx} className="text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200 font-sans">
+                            &bull; {issue}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-2 shrink-0">

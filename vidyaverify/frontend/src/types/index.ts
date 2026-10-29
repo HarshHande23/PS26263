@@ -201,6 +201,9 @@ export interface Alert {
   status: string
   related_submission_id: string | null
   related_student_id: string | null
+  anomaly_score?: number | null
+  risk_level?: string | null
+  detected_issues?: string[] | null
   created_at: string
 }
 

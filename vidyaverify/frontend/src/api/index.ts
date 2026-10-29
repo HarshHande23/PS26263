@@ -150,7 +150,7 @@ export const findingsApi = {
 
 // ── Alerts ────────────────────────────────────────────────────────────────────
 export const alertsApi = {
-  list: async (params?: { institution_id?: string; status?: string; limit?: number }): Promise<Alert[]> => {
+  list: async (params?: { institution_id?: string; status?: string; alert_type?: string; limit?: number }): Promise<Alert[]> => {
     const res = await apiClient.get('/alerts', { params })
     return res.data
   },

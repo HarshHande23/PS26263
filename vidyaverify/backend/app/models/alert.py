@@ -1,6 +1,6 @@
 import uuid
 from datetime import datetime, timezone
-from sqlalchemy import Column, String, DateTime, ForeignKey, Text
+from sqlalchemy import Column, String, DateTime, ForeignKey, Text, Float, JSON
 from app.core.database import UUID
 from sqlalchemy.orm import relationship
 from app.core.database import Base
@@ -12,7 +12,7 @@ class Alert(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, index=True)
     institution_id = Column(UUID(as_uuid=True), ForeignKey("institutions.id"), nullable=True, index=True)
-    alert_type = Column(String(100), nullable=False)  # e.g. "intake_exceeded", "duplicate_found"
+    alert_type = Column(String(100), nullable=False)  # e.g. "intake_exceeded", "duplicate_found", "ml_anomaly"
     severity = Column(String(20), nullable=False, default="warning")
     title = Column(String(500), nullable=False)
     message = Column(Text, nullable=True)
@@ -22,6 +22,11 @@ class Alert(Base):
     acknowledged_by_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     acknowledged_at = Column(DateTime(timezone=True), nullable=True)
     created_at = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False)
+
+    # ML Isolation Forest Anomaly Metadata
+    anomaly_score = Column(Float, nullable=True)
+    risk_level = Column(String(50), nullable=True)
+    detected_issues = Column(JSON, nullable=True)
 
     institution = relationship("Institution", back_populates="alerts")
     submission = relationship("UploadSubmission", foreign_keys=[related_submission_id])

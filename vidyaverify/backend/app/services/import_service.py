@@ -19,8 +19,10 @@ from app.models.duplicate_case import DuplicateCase
 from app.models.alert import Alert
 from app.models.programme import Programme
 from app.models.academic_year import AcademicYear
+from app.models.anomaly_record import AnomalyRecord
 from app.services.validation_engine import validation_engine, hash_apaar, mask_apaar, APAAR_PATTERN
 from app.core.enums import SubmissionStatus
+from app.ml.predictor import score_rows, MODEL_LABEL
 
 # Required columns in the import template
 REQUIRED_COLUMNS = {"full_name"}
@@ -68,6 +70,81 @@ def clean_row_data(row: Dict[str, Any]) -> Dict[str, Any]:
         else:
             cleaned[k] = "" if (v is None or str(v).lower() == "nan") else str(v)
     return cleaned
+
+
+def _record_ml_result(
+    db: Session,
+    submission: UploadSubmission,
+    institution_id: UUID,
+    row_number: int,
+    row_dict_clean: Dict[str, Any],
+    ml_info: Optional[Dict[str, Any]],
+    student_id: Optional[UUID] = None,
+):
+    """
+    Persist Isolation Forest anomaly score, risk level, and detected issues
+    into the database, and create real alerts for anomalous records.
+    """
+    if not ml_info:
+        return
+
+    score = ml_info.get("anomaly_score")
+    risk = ml_info.get("risk_level", "normal")
+    is_anomaly = ml_info.get("is_anomaly", False)
+    detected_issues = ml_info.get("detected_issues", [])
+
+    # 1. Persist AnomalyRecord in DB
+    rec = AnomalyRecord(
+        submission_id=submission.id,
+        student_id=student_id,
+        institution_id=institution_id,
+        row_number=row_number,
+        anomaly_score=score if score is not None else 0.0,
+        risk_level=risk,
+        is_anomaly=is_anomaly,
+        detected_issues=detected_issues,
+        model_version="IsolationForest-v1-synthetic",
+    )
+    db.add(rec)
+
+    # 2. If flagged as anomaly by Isolation Forest, generate a real Alert in DB
+    if is_anomaly:
+        sev = "critical" if risk in ("critical", "high") else ("warning" if risk == "medium" else "info")
+        issue_summary = detected_issues[0] if detected_issues else "Unusual demographic/enrolment vector"
+        alert = Alert(
+            institution_id=institution_id,
+            alert_type="ml_anomaly",
+            severity=sev,
+            title=f"ML Anomaly [{risk.upper()}]: Row {row_number} - {issue_summary}",
+            message=(
+                f"[{MODEL_LABEL}] "
+                f"Isolation Forest calculated anomaly score: {score}. "
+                f"Assessed Risk: {risk.upper()}. "
+                f"Submission: '{submission.filename}' (Row {row_number}). "
+                f"Detected patterns: {'; '.join(detected_issues)}"
+            ),
+            related_submission_id=submission.id,
+            related_student_id=student_id,
+            status="open",
+            anomaly_score=score,
+            risk_level=risk,
+            detected_issues=detected_issues,
+        )
+        db.add(alert)
+
+        # 3. Add to ImportErrorModel for this submission so it also shows in the row breakdown
+        err = ImportErrorModel(
+            submission_id=submission.id,
+            row_number=row_number,
+            row_data=row_dict_clean,
+            error_type=f"RULE_ML_ANOMALY_{risk.upper()}",
+            field_name="ml_anomaly",
+            error_message=(
+                f"[{MODEL_LABEL}] Isolation Forest anomaly score: {score} ({risk.upper()}). "
+                f"{'; '.join(detected_issues)}"
+            ),
+        )
+        db.add(err)
 
 
 def process_submission(
@@ -157,6 +234,10 @@ def process_submission(
     programmes = {p.code: p for p in db.query(Programme).filter_by(institution_id=institution_id).all()}
     academic_years = {ay.label: ay for ay in db.query(AcademicYear).filter_by(institution_id=institution_id).all()}
 
+    # ── Phase 4.5: Isolation Forest Anomaly Scoring ────────────────────────
+    ml_scored_rows = score_rows(rows)
+    ml_by_row = {item["row_number"]: item for item in ml_scored_rows}
+
     # ── Phase 5: Import valid rows ─────────────────────────────────────────
     valid_count = 0
     invalid_count = 0
@@ -174,6 +255,7 @@ def process_submission(
         apaar_raw = str(row.get("apaar_id") or "").strip()
         apaar_hash = hash_apaar(apaar_raw) if (apaar_raw and APAAR_PATTERN.match(apaar_raw)) else None
         is_cross_dup = apaar_hash in cross_dup_hashes if apaar_hash else False
+        ml_info = ml_by_row.get(i)
 
         row_dict_clean = clean_row_data(row)
 
@@ -202,6 +284,7 @@ def process_submission(
                     error_message=f["title"],
                 )
                 db.add(err)
+            _record_ml_result(db, submission, institution_id, i, row_dict_clean, ml_info, student_id=None)
             continue
 
         if is_second_dup:
@@ -217,6 +300,7 @@ def process_submission(
                 error_message=dup_details[i]["message"],
             )
             db.add(err)
+            _record_ml_result(db, submission, institution_id, i, row_dict_clean, ml_info, student_id=None)
             continue
 
         if is_first_dup:
@@ -314,6 +398,7 @@ def process_submission(
                 db.add(err)
                 skipped_count += 1
                 invalid_count += 1
+                _record_ml_result(db, submission, institution_id, i, row_dict_clean, ml_info, student_id=None)
                 continue
 
         # Create student record
@@ -339,6 +424,7 @@ def process_submission(
         )
         db.add(student)
         db.flush()
+        _record_ml_result(db, submission, institution_id, i, row_dict_clean, ml_info, student_id=student.id)
 
         # Save findings for this student
         all_row_findings = list(row_findings.get(i, []))
