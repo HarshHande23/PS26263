@@ -125,6 +125,11 @@ export interface Student {
   is_foreign_national: boolean
   is_pwd: boolean
   validation_status: ValidationStatus
+  verification_status?: string
+  last_verified_at?: string | null
+  verification_notes?: string | null
+  qr_token?: string | null
+  qr_token_expires_at?: string | null
   created_at: string
   updated_at: string
 }
@@ -245,3 +250,68 @@ export interface AICTEDashboard {
     active_students: number
   }>
 }
+
+export interface VerificationResultOut {
+  reference_id: string
+  student_id: string
+  institution_id: string
+  status: string
+  status_label: string
+  match_confidence: number
+  is_simulated: boolean
+  simulation_label: string
+  disclaimer: string
+  provider_code: string
+  provider_message: string
+  timestamp: string
+  details?: Record<string, unknown>
+}
+
+export interface PublicVerificationResult {
+  is_valid: boolean
+  status: string
+  full_name: string
+  institution_name: string
+  programme_name: string
+  academic_year: string
+  enrolment_number: string
+  verification_status: string
+  issued_at: string
+  expires_at: string
+  is_simulated: boolean
+  disclaimer: string
+}
+
+export interface DataQualityScore {
+  overall_score: number
+  grade: string
+  completeness_score: number
+  apaar_coverage_score: number
+  format_validity_score: number
+  intake_compliance_score: number
+  total_students: number
+  unresolved_findings: number
+  recommendations: string[]
+}
+
+export interface AnalyticsData {
+  state_distribution: Array<{ state: string; count: number }>
+  programme_distribution: Array<{ programme: string; count: number }>
+  verification_breakdown: Record<string, number>
+  total_intake_capacity: number
+  total_enrolment: number
+  overall_capacity_utilization: number
+  anomalies_detected: number
+}
+
+export interface AuditLogEntry {
+  id: string
+  user_id: string
+  action: string
+  resource_type: string
+  resource_id: string
+  details: string
+  ip_address: string
+  created_at: string
+}
+

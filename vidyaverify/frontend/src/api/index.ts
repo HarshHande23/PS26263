@@ -133,6 +133,10 @@ export const findingsApi = {
     const res = await apiClient.get('/findings/duplicates', { params })
     return res.data
   },
+  reviewDuplicate: async (id: string, status: string, notes?: string): Promise<DuplicateCase> => {
+    const res = await apiClient.post(`/findings/duplicates/${id}/review`, { status, notes })
+    return res.data
+  },
 }
 
 // ── Alerts ────────────────────────────────────────────────────────────────────
@@ -145,6 +149,61 @@ export const alertsApi = {
     const res = await apiClient.post(`/alerts/${id}/acknowledge`)
     return res.data
   },
+  transition: async (id: string, new_status: string, resolution_notes?: string): Promise<Alert> => {
+    const res = await apiClient.post(`/alerts/${id}/transition`, { new_status, resolution_notes })
+    return res.data
+  },
+}
+
+// ── Verification ──────────────────────────────────────────────────────────────
+export const verificationApi = {
+  verifyStudent: async (studentId: string, forceSimulatedOutcome?: string): Promise<any> => {
+    const res = await apiClient.post(
+      `/verification/students/${studentId}/verify`,
+      forceSimulatedOutcome ? { force_simulated_outcome: forceSimulatedOutcome } : {}
+    )
+    return res.data
+  },
+  generateQr: async (studentId: string): Promise<{ student_id: string; qr_token: string; expires_at: string; verify_url: string }> => {
+    const res = await apiClient.post(`/verification/students/${studentId}/generate-qr`)
+    return res.data
+  },
+  publicVerifyToken: async (token: string): Promise<any> => {
+    const res = await apiClient.get(`/verification/public/verify-token`, { params: { token } })
+    return res.data
+  },
+  history: async (studentId: string): Promise<any[]> => {
+    const res = await apiClient.get(`/verification/students/${studentId}/history`)
+    return res.data
+  },
+}
+
+// ── Reports & Compliance ──────────────────────────────────────────────────────
+export const reportsApi = {
+  enrolmentSummary: async (format: 'json' | 'csv' = 'json') => {
+    const res = await apiClient.get('/reports/enrolment-summary', { params: { format } })
+    return res.data
+  },
+  intakeDiscrepancies: async (format: 'json' | 'csv' = 'json') => {
+    const res = await apiClient.get('/reports/intake-discrepancies', { params: { format } })
+    return res.data
+  },
+  validationFindings: async (severity?: string, format: 'json' | 'csv' = 'json') => {
+    const res = await apiClient.get('/reports/validation-findings', { params: { severity, format } })
+    return res.data
+  },
+  anomalies: async (syncAlerts = false) => {
+    const res = await apiClient.get('/reports/anomalies', { params: { sync_alerts: syncAlerts } })
+    return res.data
+  },
+  auditLogs: async (limit = 100, action?: string, format: 'json' | 'csv' = 'json') => {
+    const res = await apiClient.get('/reports/audit-logs', { params: { limit, action, format } })
+    return res.data
+  },
+  enrolmentSummaryCsvUrl: () => `${apiClient.defaults.baseURL}/reports/enrolment-summary?format=csv`,
+  intakeDiscrepanciesCsvUrl: () => `${apiClient.defaults.baseURL}/reports/intake-discrepancies?format=csv`,
+  validationFindingsCsvUrl: (sev?: string) => `${apiClient.defaults.baseURL}/reports/validation-findings?format=csv${sev ? `&severity=${sev}` : ''}`,
+  auditLogsCsvUrl: () => `${apiClient.defaults.baseURL}/reports/audit-logs?format=csv`,
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────
@@ -157,6 +216,16 @@ export const dashboardApi = {
   },
   aicte: async (): Promise<AICTEDashboard> => {
     const res = await apiClient.get('/dashboard/aicte')
+    return res.data
+  },
+  analytics: async (): Promise<any> => {
+    const res = await apiClient.get('/dashboard/analytics')
+    return res.data
+  },
+  dataQuality: async (institution_id?: string): Promise<any> => {
+    const res = await apiClient.get('/dashboard/data-quality', {
+      params: institution_id ? { institution_id } : {},
+    })
     return res.data
   },
 }
