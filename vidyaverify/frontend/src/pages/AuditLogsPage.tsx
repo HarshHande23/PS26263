@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react'
-import { History, Download, Filter, Search, ShieldCheck } from 'lucide-react'
+import { History, Download, Filter, Search, ShieldCheck, Loader2 } from 'lucide-react'
 import { reportsApi } from '@/api'
 
 export const AuditLogsPage: React.FC = () => {
   const [logs, setLogs] = useState<any[]>([])
   const [loading, setLoading] = useState<boolean>(true)
+  const [downloading, setDownloading] = useState<boolean>(false)
   const [actionFilter, setActionFilter] = useState<string>('')
   const [limit, setLimit] = useState<number>(100)
 
@@ -17,6 +18,26 @@ export const AuditLogsPage: React.FC = () => {
         setLoading(false)
       })
       .catch(() => setLoading(false))
+  }
+
+  const handleExportAuditLogs = async () => {
+    setDownloading(true)
+    try {
+      const blob = await reportsApi.downloadAuditLogsCsv(actionFilter || undefined, limit)
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `aicte_audit_logs_${new Date().toISOString().slice(0, 10)}.csv`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Blob export failed, falling back to direct link:', err)
+      window.open(reportsApi.auditLogsCsvUrl(), '_blank')
+    } finally {
+      setDownloading(false)
+    }
   }
 
   useEffect(() => {
@@ -37,13 +58,18 @@ export const AuditLogsPage: React.FC = () => {
           </p>
         </div>
 
-        <a
-          href={reportsApi.auditLogsCsvUrl()}
-          download
-          className="flex items-center gap-1.5 px-3 py-2 bg-[#0B3C5D] text-white rounded text-xs font-semibold hover:bg-[#072438] transition-colors shadow-sm"
+        <button
+          onClick={handleExportAuditLogs}
+          disabled={downloading}
+          className="flex items-center gap-1.5 px-3 py-2 bg-[#0B3C5D] text-white rounded text-xs font-semibold hover:bg-[#072438] active:scale-95 transition-all shadow-sm disabled:opacity-50 cursor-pointer"
         >
-          <Download className="w-3.5 h-3.5" /> Export Audit Log CSV
-        </a>
+          {downloading ? (
+            <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          ) : (
+            <Download className="w-3.5 h-3.5" />
+          )}
+          Export Audit Log CSV
+        </button>
       </div>
 
       {/* Filter Bar */}
@@ -134,3 +160,4 @@ export const AuditLogsPage: React.FC = () => {
     </div>
   )
 }
+

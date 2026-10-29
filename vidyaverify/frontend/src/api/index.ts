@@ -209,10 +209,53 @@ export const reportsApi = {
     const res = await apiClient.get('/reports/audit-logs', { params: { limit, action, format } })
     return res.data
   },
-  enrolmentSummaryCsvUrl: () => `${apiClient.defaults.baseURL}/reports/enrolment-summary?format=csv`,
-  intakeDiscrepanciesCsvUrl: () => `${apiClient.defaults.baseURL}/reports/intake-discrepancies?format=csv`,
-  validationFindingsCsvUrl: (sev?: string) => `${apiClient.defaults.baseURL}/reports/validation-findings?format=csv${sev ? `&severity=${sev}` : ''}`,
-  auditLogsCsvUrl: () => `${apiClient.defaults.baseURL}/reports/audit-logs?format=csv`,
+  enrolmentSummaryCsvUrl: () => {
+    const token = localStorage.getItem('access_token')
+    return `${apiClient.defaults.baseURL}/reports/enrolment-summary?format=csv${token ? `&token=${encodeURIComponent(token)}` : ''}`
+  },
+  intakeDiscrepanciesCsvUrl: () => {
+    const token = localStorage.getItem('access_token')
+    return `${apiClient.defaults.baseURL}/reports/intake-discrepancies?format=csv${token ? `&token=${encodeURIComponent(token)}` : ''}`
+  },
+  validationFindingsCsvUrl: (sev?: string) => {
+    const token = localStorage.getItem('access_token')
+    const params = new URLSearchParams({ format: 'csv' })
+    if (sev) params.set('severity', sev)
+    if (token) params.set('token', token)
+    return `${apiClient.defaults.baseURL}/reports/validation-findings?${params.toString()}`
+  },
+  auditLogsCsvUrl: () => {
+    const token = localStorage.getItem('access_token')
+    return `${apiClient.defaults.baseURL}/reports/audit-logs?format=csv${token ? `&token=${encodeURIComponent(token)}` : ''}`
+  },
+  downloadEnrolmentCsv: async (): Promise<Blob> => {
+    const res = await apiClient.get('/reports/enrolment-summary', {
+      params: { format: 'csv' },
+      responseType: 'blob',
+    })
+    return res.data
+  },
+  downloadDiscrepanciesCsv: async (): Promise<Blob> => {
+    const res = await apiClient.get('/reports/intake-discrepancies', {
+      params: { format: 'csv' },
+      responseType: 'blob',
+    })
+    return res.data
+  },
+  downloadFindingsCsv: async (severity?: string): Promise<Blob> => {
+    const res = await apiClient.get('/reports/validation-findings', {
+      params: { format: 'csv', ...(severity ? { severity } : {}) },
+      responseType: 'blob',
+    })
+    return res.data
+  },
+  downloadAuditLogsCsv: async (action?: string, limit = 500): Promise<Blob> => {
+    const res = await apiClient.get('/reports/audit-logs', {
+      params: { format: 'csv', limit, ...(action ? { action } : {}) },
+      responseType: 'blob',
+    })
+    return res.data
+  },
 }
 
 // ── Dashboard ─────────────────────────────────────────────────────────────────

@@ -8,6 +8,7 @@ import {
   CheckCircle,
   FileText,
   ShieldAlert,
+  Loader2,
 } from 'lucide-react'
 import { reportsApi } from '@/api'
 import { useAuth } from '@/hooks/useAuth'
@@ -20,9 +21,45 @@ export const ReportsPage: React.FC = () => {
     'enrolment'
   )
   const [loading, setLoading] = useState<boolean>(false)
+  const [downloading, setDownloading] = useState<boolean>(false)
   const [reportData, setReportData] = useState<any[]>([])
   const [anomalyData, setAnomalyData] = useState<any[]>([])
   const [syncNotice, setSyncNotice] = useState<string | null>(null)
+
+  const handleExport = async (type: 'enrolment' | 'discrepancies' | 'findings') => {
+    setDownloading(true)
+    try {
+      let blob: Blob
+      let filename = ''
+      if (type === 'enrolment') {
+        blob = await reportsApi.downloadEnrolmentCsv()
+        filename = `aicte_enrolment_summary_${new Date().toISOString().slice(0, 10)}.csv`
+      } else if (type === 'discrepancies') {
+        blob = await reportsApi.downloadDiscrepanciesCsv()
+        filename = `aicte_intake_discrepancies_${new Date().toISOString().slice(0, 10)}.csv`
+      } else {
+        blob = await reportsApi.downloadFindingsCsv()
+        filename = `aicte_validation_findings_${new Date().toISOString().slice(0, 10)}.csv`
+      }
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('Blob export failed, falling back to direct URL:', err)
+      let fallbackUrl = ''
+      if (type === 'enrolment') fallbackUrl = reportsApi.enrolmentSummaryCsvUrl()
+      else if (type === 'discrepancies') fallbackUrl = reportsApi.intakeDiscrepanciesCsvUrl()
+      else fallbackUrl = reportsApi.validationFindingsCsvUrl()
+      window.open(fallbackUrl, '_blank')
+    } finally {
+      setDownloading(false)
+    }
+  }
 
   const loadCurrentReport = () => {
     setLoading(true)
@@ -97,31 +134,46 @@ export const ReportsPage: React.FC = () => {
 
         <div className="flex items-center gap-2">
           {activeTab === 'enrolment' && (
-            <a
-              href={reportsApi.enrolmentSummaryCsvUrl()}
-              download
-              className="flex items-center gap-1.5 px-3 py-2 bg-[#0B3C5D] text-white rounded text-xs font-semibold hover:bg-[#072438] transition-colors shadow-sm"
+            <button
+              onClick={() => handleExport('enrolment')}
+              disabled={downloading}
+              className="flex items-center gap-1.5 px-3 py-2 bg-[#0B3C5D] text-white rounded text-xs font-semibold hover:bg-[#072438] active:scale-95 transition-all shadow-sm disabled:opacity-50 cursor-pointer"
             >
-              <Download className="w-3.5 h-3.5" /> Export Enrolment CSV
-            </a>
+              {downloading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Download className="w-3.5 h-3.5" />
+              )}
+              Export Enrolment CSV
+            </button>
           )}
           {activeTab === 'discrepancies' && isAicte && (
-            <a
-              href={reportsApi.intakeDiscrepanciesCsvUrl()}
-              download
-              className="flex items-center gap-1.5 px-3 py-2 bg-red-700 text-white rounded text-xs font-semibold hover:bg-red-800 transition-colors shadow-sm"
+            <button
+              onClick={() => handleExport('discrepancies')}
+              disabled={downloading}
+              className="flex items-center gap-1.5 px-3 py-2 bg-red-700 text-white rounded text-xs font-semibold hover:bg-red-800 active:scale-95 transition-all shadow-sm disabled:opacity-50 cursor-pointer"
             >
-              <Download className="w-3.5 h-3.5" /> Export Discrepancy CSV
-            </a>
+              {downloading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Download className="w-3.5 h-3.5" />
+              )}
+              Export Discrepancy CSV
+            </button>
           )}
           {activeTab === 'findings' && (
-            <a
-              href={reportsApi.validationFindingsCsvUrl()}
-              download
-              className="flex items-center gap-1.5 px-3 py-2 bg-[#1D4E89] text-white rounded text-xs font-semibold hover:bg-[#0B3C5D] transition-colors shadow-sm"
+            <button
+              onClick={() => handleExport('findings')}
+              disabled={downloading}
+              className="flex items-center gap-1.5 px-3 py-2 bg-[#1D4E89] text-white rounded text-xs font-semibold hover:bg-[#0B3C5D] active:scale-95 transition-all shadow-sm disabled:opacity-50 cursor-pointer"
             >
-              <Download className="w-3.5 h-3.5" /> Export Findings CSV
-            </a>
+              {downloading ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Download className="w-3.5 h-3.5" />
+              )}
+              Export Findings CSV
+            </button>
           )}
           {activeTab === 'anomalies' && isAicte && (
             <button
@@ -394,3 +446,4 @@ export const ReportsPage: React.FC = () => {
     </div>
   )
 }
+
